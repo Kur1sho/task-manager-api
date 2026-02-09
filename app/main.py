@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException, status, Body
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from jose import jwt, JWTError
 
@@ -59,9 +59,13 @@ def register(payload: schemas.UserCreate = Body(...), db: Session = Depends(get_
     return user
 
 @app.post("/auth/login", response_model=schemas.TokenOut)
-def login(payload: schemas.UserCreate = Body(...), db: Session = Depends(get_db)):
-    user = db.query(models.User).filter(models.User.email == payload.email).first()
-    if not user or not verify_password(payload.password, user.password_hash):
+def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    # Swagger sends: username + password (we treat username as email)
+    email = form_data.username
+    password = form_data.password
+
+    user = db.query(models.User).filter(models.User.email == email).first()
+    if not user or not verify_password(password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
     token = create_access_token(subject=user.email)
@@ -70,18 +74,18 @@ def login(payload: schemas.UserCreate = Body(...), db: Session = Depends(get_db)
 # ---------- TASKS ----------
 @app.get("/tasks", response_model=list[schemas.TaskOut])
 def get_tasks(db: Session = Depends(get_db), user: models.User = Depends(get_current_user)):
-    return db.query(models.Task).order_by(models.Task.id.asc()).all()
+    return db.query(models.Task).filter(models.Task.user_id == user.id).order_by(models.Task.id.asc()).all()
 
 @app.get("/tasks/{task_id}", response_model=schemas.TaskOut)
 def get_task(task_id: int, db: Session = Depends(get_db), user: models.User = Depends(get_current_user)):
-    task = db.query(models.Task).filter(models.Task.id == task_id).first()
+    task = db.query(models.Task).filter(models.Task.id == task_id, models.Task.user_id == user.id).first()
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
     return task
 
 @app.post("/tasks", response_model=schemas.TaskOut, status_code=201)
 def create_task(payload: schemas.TaskCreate, db: Session = Depends(get_db), user: models.User = Depends(get_current_user)):
-    task = models.Task(title=payload.title, description=payload.description, status=payload.status)
+    task = models.Task(title=payload.title, description=payload.description, status=payload.status, user_id=user.id)
     db.add(task)
     db.commit()
     db.refresh(task)
@@ -89,7 +93,7 @@ def create_task(payload: schemas.TaskCreate, db: Session = Depends(get_db), user
 
 @app.delete("/tasks/{task_id}", response_model=schemas.TaskOut)
 def delete_task(task_id: int, db: Session = Depends(get_db), user: models.User = Depends(get_current_user)):
-    task = db.query(models.Task).filter(models.Task.id == task_id).first()
+    task = db.query(models.Task).filter(models.Task.id == task_id, models.Task.user_id == user.id).first()
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
     db.delete(task)

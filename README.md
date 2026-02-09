@@ -1,38 +1,48 @@
 # Task Manager API
 
-A simple cloud-ready task manager API built with FastAPI.
-
-This project is part of my backend/cloud engineering portfolio and is deployed live on Render.
-
-## Live demo
-API is deployed and publicly accessible:
-https://task-manager-api-jgw0.onrender.com/docs
-
+A simple Task Manager REST API built with FastAPI, SQLite, and JWT authentication.
 
 ## Features
-- REST API built with FastAPI
-- Auto-generated API documentation
-- Lightweight and easy to extend
+- User registration + login
+- JWT authentication (protected endpoints)
+- CRUD tasks stored in SQLite
+- Tasks are scoped to the authenticated user
+- Auto-generated Swagger docs
 
-
-## How to run locally
-1. Create a virtual environment:
-python -m venv venv
-
-2. Activate it:
-venv\Scripts\activate
-
-3. Install dependencies:
-pip install fastapi uvicorn
-
-4. Run the server:
-uvicorn main:app --reload
-
-5. Open in browser:
-http://127.0.0.1:8000/docs
-
-
-## Tech stack
+## Tech Stack
 - Python
 - FastAPI
-- Uvicorn
+- SQLAlchemy
+- SQLite
+- JWT (python-jose)
+- Passlib (password hashing)
+
+## Run locally (Windows PowerShell)
+### 1) Create and activate a virtual environment
+powershell
+python -m venv venv
+.\venv\Scripts\Activate.ps1
+### 2) Install dependencies
+pip install -r requirements.txt
+### 3) Run the API
+python -m uvicorn app.main:app --reload
+### 4) Open docs
+Swagger UI: http://127.0.0.1:8000/docs
+
+## API Overview
+### Auth
+POST /auth/register (JSON body)
+POST /auth/login (OAuth2 form: username + password)
+
+### Tasks (JWT required)
+GET /tasks
+POST /tasks
+GET /tasks/{task_id}
+DELETE /tasks/{task_id}
+
+## Deployment (Render)
+This project is deployable as a Render Web Service using:
+requirements.txt for dependencies
+Procfile for the start command
+
+Note: Render free instances may sleep when inactive, causing a short delay on first request.
