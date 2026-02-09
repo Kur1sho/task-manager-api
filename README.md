@@ -5,7 +5,9 @@ A simple cloud-ready task manager API built with FastAPI.
 This project is part of my backend/cloud engineering portfolio.
 
 ## Live demo
-(coming soon)
+API is deployed and publicly accessible:
+https://task-manager-api-jgw0.onrender.com/docs
+
 
 ## Features
 - REST API built with FastAPI
