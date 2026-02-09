@@ -1,13 +1,18 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, status, Body
+from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
+from jose import jwt, JWTError
 
 from .database import Base, engine, SessionLocal
 from . import models, schemas
+from .auth import hash_password, verify_password, create_access_token
+from .config import JWT_SECRET, JWT_ALGORITHM
 
-# Create tables
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Task Manager API")
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 def get_db():
     db = SessionLocal()
@@ -16,35 +21,74 @@ def get_db():
     finally:
         db.close()
 
+def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> models.User:
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        email = payload.get("sub")
+        if not email:
+            raise HTTPException(status_code=401, detail="Invalid token")
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    user = db.query(models.User).filter(models.User.email == email).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+    return user
+
 @app.get("/")
 def read_root():
     return {"message": "Task Manager API is running"}
 
+# ---------- AUTH ----------
+@app.post("/auth/register", response_model=schemas.UserOut, status_code=201)
+def register(payload: schemas.UserCreate = Body(...), db: Session = Depends(get_db)):
+    existing = db.query(models.User).filter(models.User.email == payload.email).first()
+    if "@" not in payload.email or "." not in payload.email:
+        raise HTTPException(status_code=400, detail="Invalid email")
+
+    if existing:
+        raise HTTPException(status_code=400, detail="Email already registered")
+
+    user = models.User(
+        email=payload.email,
+        password_hash=hash_password(payload.password)
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
+
+@app.post("/auth/login", response_model=schemas.TokenOut)
+def login(payload: schemas.UserCreate = Body(...), db: Session = Depends(get_db)):
+    user = db.query(models.User).filter(models.User.email == payload.email).first()
+    if not user or not verify_password(payload.password, user.password_hash):
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+
+    token = create_access_token(subject=user.email)
+    return {"access_token": token, "token_type": "bearer"}
+
+# ---------- TASKS ----------
 @app.get("/tasks", response_model=list[schemas.TaskOut])
-def get_tasks(db: Session = Depends(get_db)):
+def get_tasks(db: Session = Depends(get_db), user: models.User = Depends(get_current_user)):
     return db.query(models.Task).order_by(models.Task.id.asc()).all()
 
 @app.get("/tasks/{task_id}", response_model=schemas.TaskOut)
-def get_task(task_id: int, db: Session = Depends(get_db)):
+def get_task(task_id: int, db: Session = Depends(get_db), user: models.User = Depends(get_current_user)):
     task = db.query(models.Task).filter(models.Task.id == task_id).first()
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
     return task
 
 @app.post("/tasks", response_model=schemas.TaskOut, status_code=201)
-def create_task(payload: schemas.TaskCreate, db: Session = Depends(get_db)):
-    task = models.Task(
-        title=payload.title,
-        description=payload.description,
-        status=payload.status
-    )
+def create_task(payload: schemas.TaskCreate, db: Session = Depends(get_db), user: models.User = Depends(get_current_user)):
+    task = models.Task(title=payload.title, description=payload.description, status=payload.status)
     db.add(task)
     db.commit()
     db.refresh(task)
     return task
 
 @app.delete("/tasks/{task_id}", response_model=schemas.TaskOut)
-def delete_task(task_id: int, db: Session = Depends(get_db)):
+def delete_task(task_id: int, db: Session = Depends(get_db), user: models.User = Depends(get_current_user)):
     task = db.query(models.Task).filter(models.Task.id == task_id).first()
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
