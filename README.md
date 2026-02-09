@@ -2,7 +2,7 @@
 
 A simple cloud-ready task manager API built with FastAPI.
 
-This project is part of my backend/cloud engineering portfolio.
+This project is part of my backend/cloud engineering portfolio and is deployed live on Render.
 
 ## Live demo
 API is deployed and publicly accessible:
