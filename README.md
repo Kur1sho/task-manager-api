@@ -46,3 +46,5 @@ requirements.txt for dependencies
 Procfile for the start command
 
 Note: Render free instances may sleep when inactive, causing a short delay on first request.
+
+### Example Render Service: https://task-manager-api-lgw0.onrender.com/docs
