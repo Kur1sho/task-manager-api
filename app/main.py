@@ -99,3 +99,7 @@ def delete_task(task_id: int, db: Session = Depends(get_db), user: models.User =
     db.delete(task)
     db.commit()
     return task
+
+@app.get("/health")
+def health_check():
+    return {"status": "ok"}
