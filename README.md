@@ -71,3 +71,13 @@ This project demonstrates:
 - Database integration
 - Containerization with Docker
 - Cloud deployment workflow
+
+## Automated Testing & CI
+This project includes automated tests and a GitHub Actions CI pipeline.
+On every push to the `main` branch:
+- Tests are executed automatically
+- The Docker image is built to ensure deployability
+This ensures the API is always in a working, deployable state.
+
+### Run tests locally
+python -m pytest -q
