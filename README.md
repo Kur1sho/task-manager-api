@@ -64,19 +64,6 @@ This service is deployable as a Render Web Service using:
 ### Example live deployment:
 https://task-manager-api-lgw0.onrender.com/docs
 
-## Project Structure
-app/
- ├── main.py        # FastAPI app and routes
- ├── models.py      # SQLAlchemy models
- ├── schemas.py     # Pydantic schemas
- ├── database.py    # DB setup
- ├── auth.py        # Password + JWT logic
- └── config.py      # Settings
-Dockerfile
-requirements.txt
-Procfile
-README.md
-
 ## Purpose
 This project demonstrates:
 - Backend API design
